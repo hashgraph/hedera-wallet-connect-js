@@ -1,5 +1,5 @@
 {
-  "name": "hedera-wallet-connect",
+  "name": "@bladelabs/hedera-wallet-connect",
   "version": "0.1.0",
   "type": "module",
   "files": [
