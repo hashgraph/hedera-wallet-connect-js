@@ -1,0 +1,45 @@
+{
+  "name": "hedera-wallet-connect",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "lib/**/*"
+  ],
+  "module": "./lib/esm/index.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./lib/esm/types/index.d.ts",
+        "default": "./lib/esm/index.js"
+      }
+    }
+  },
+  "author": "Blade Labs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Blade-Labs/hedera-wallet-connect"
+  },
+  "scripts": {
+    "clean": "rimraf lib",
+    "build": "npm run clean && npm run build:esm",
+    "build:esm": "tsc",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@json-rpc-tools/utils": "^2.0.0-beta.12",
+    "@hashgraph/sdk": "^2.18.3",
+    "@walletconnect/core": "^2.0.0-rc.4",
+    "@walletconnect/types": "^2.0.0-rc.4",
+    "@walletconnect/sign-client": "^2.0.0-rc.4",
+    "@walletconnect/qrcode-modal": "^1.8.0",
+    "buffer": "^6.0.3",
+    "events": "^3.3.0",
+    "rxjs": "^7.5.7"
+  },
+  "devDependencies": {
+    "rimraf": "^3.0.2",
+    "typescript": "^4.8.4",
+    "tslint": "^6.1.3"
+  }
+}
