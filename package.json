@@ -2,18 +2,14 @@
   "name": "@bladelabs/hedera-wallet-connect",
   "version": "0.1.0",
   "type": "module",
-  "files": [
-    "lib/**/*"
-  ],
-  "module": "./lib/esm/index.js",
   "exports": {
     ".": {
-      "import": {
-        "types": "./lib/esm/types/index.d.ts",
-        "default": "./lib/esm/index.js"
-      }
+      "types": "./lib/esm/types/index.d.ts",
+      "import": "./lib/esm/index.js"
     }
   },
+  "types": "./lib/esm/types/index.d.ts",
+  "main": "./lib/esm/index.js",
   "author": "Blade Labs",
   "license": "MIT",
   "repository": {

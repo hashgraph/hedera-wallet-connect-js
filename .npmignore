@@ -1,5 +1,6 @@
 .DS_Store
 node_modules
+src
 
 # Log files
 npm-debug.log*
@@ -15,3 +16,8 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+tsconfig.json
+tslint.json
+package-lock.json
+.gitignore
+
