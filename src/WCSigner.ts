@@ -11,25 +11,44 @@ import {
   TransactionId,
   TransactionRecord, TransactionResponse
 } from "@hashgraph/sdk";
-import {ISignClient, SessionTypes} from "@walletconnect/types";
+import {ISignClient} from "@walletconnect/types";
 import {Buffer} from "buffer";
 import {getChainByLedgerId, isEncodable, isTransaction} from "./Utils.js";
+import {CatchAll} from "./ErrorHelper.js";
+import {DAppConnector} from "./DAppConnector.js";
+
+const handleSignerError = async (error: any, signer: Signer) => {
+  try {
+    const existingSession = await DAppConnector.instance.checkPersistedState();
+    if (existingSession) {
+      await DAppConnector.instance.onSessionConnected(existingSession);
+    } else {
+      const pairing = signer.client.pairing.getAll({active: true}).pop();
+      await DAppConnector.instance.connect(signer.getLedgerId(), pairing?.topic);
+    }
+  } catch (e) {
+    try {
+      await DAppConnector.instance.disconnect();
+    } finally {
+      await DAppConnector.instance.connect(signer.getLedgerId())
+    }
+  }
+
+  return true;
+};
 
 /**
  * Implements Hedera Signer interface.
  * https://hips.hedera.com/hip/hip-338
  */
+@CatchAll(handleSignerError, {retry: true, retryDelay: 1000})
 export class WCSigner implements Signer {
-  private readonly accountId: AccountId;
-  private readonly ledgerId: LedgerId;
-  private readonly client: ISignClient;
-  private readonly topic: string;
-
-  constructor(accountId: AccountId, client: ISignClient, session: SessionTypes.Struct, ledgerId: LedgerId = LedgerId.MAINNET) {
-    this.accountId = accountId;
-    this.client = client;
-    this.topic = session.topic;
-    this.ledgerId = ledgerId;
+  constructor(
+      private readonly accountId: AccountId,
+      private readonly client: ISignClient,
+      private readonly topic: string,
+      private readonly ledgerId: LedgerId = LedgerId.MAINNET,
+  ) {
   }
 
   getAccountId(): AccountId {

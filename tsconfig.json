@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "experimentalDecorators": true,
     "lib": ["ESNext"],
     "target": "ES2022",
     "module": "ESNext",

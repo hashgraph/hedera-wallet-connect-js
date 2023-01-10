@@ -1,7 +1,7 @@
 import {AccountId, LedgerId} from "@hashgraph/sdk";
 import QRCodeModal from "@walletconnect/qrcode-modal";
 import {SignClient} from "@walletconnect/sign-client";
-import {PairingTypes, SessionTypes, SignClientTypes} from "@walletconnect/types";
+import {SessionTypes, SignClientTypes} from "@walletconnect/types";
 import {Subject} from "rxjs";
 import {Connector} from "./Connector.js";
 import {getRequiredNamespaces} from "./Utils.js";
@@ -12,12 +12,16 @@ type WalletEvent = {
   data: any
 }
 
+export type DAppMetadata = SignClientTypes.Metadata;
+
 export class DAppConnector extends Connector {
   private allowedEvents: string[] = [];
+  static instance: DAppConnector;
   public $events: Subject<WalletEvent> = new Subject<WalletEvent>();
 
-  constructor(metadata?: SignClientTypes.Metadata) {
+  constructor(metadata?: DAppMetadata) {
     super(metadata);
+    DAppConnector.instance = this;
   }
 
   async init(events: string[] = []) {
@@ -57,7 +61,7 @@ export class DAppConnector extends Connector {
     });
   }
 
-  async connect(ledgerId: LedgerId = LedgerId.MAINNET, pairing?: PairingTypes.Struct) {
+  async connect(ledgerId: LedgerId = LedgerId.MAINNET, activeTopic?: string) {
     if (!this.client) {
       throw new Error("WC is not initialized");
     }
@@ -70,15 +74,13 @@ export class DAppConnector extends Connector {
       const requiredNamespaces = getRequiredNamespaces(ledgerId);
       requiredNamespaces.hedera.events.push(...this.allowedEvents)
       const { uri, approval } = await this.client.connect({
-        pairingTopic: pairing?.topic,
+        pairingTopic: activeTopic,
         requiredNamespaces
       });
 
       if (uri) {
         // @ts-ignore
-        QRCodeModal.open(uri, () => {
-          /*TODO: Handle close of the modal*/
-        });
+        QRCodeModal.open(uri);
       }
 
       const session = await approval();
@@ -90,7 +92,28 @@ export class DAppConnector extends Connector {
     }
   }
 
-  private async onSessionConnected(session: SessionTypes.Struct) {
+  async prepareConnectURI(ledgerId: LedgerId = LedgerId.MAINNET, activeTopic?: string): Promise<{
+    uri?: string;
+    approval: () => Promise<SessionTypes.Struct>;
+  }> {
+    if (!this.client) {
+      throw new Error("WC is not initialized");
+    }
+
+    if (this.session) {
+      return;
+    }
+
+    const requiredNamespaces = getRequiredNamespaces(ledgerId);
+    requiredNamespaces.hedera.events.push(...this.allowedEvents);
+    this.ledgerId = ledgerId;
+    return this.client.connect({
+      pairingTopic: activeTopic,
+      requiredNamespaces
+    });
+  }
+
+  async onSessionConnected(session: SessionTypes.Struct) {
     const allNamespaceAccounts = Object.values(session?.namespaces || {})
       .map(namespace => namespace.accounts.map(acc => acc.split(":")[2]))
       .flat();
@@ -99,7 +122,7 @@ export class DAppConnector extends Connector {
     this.signers = allNamespaceAccounts.map(account => new WCSigner(
       AccountId.fromString(account),
       this.client,
-      session,
+      session.topic,
       this.ledgerId
     ))
   }

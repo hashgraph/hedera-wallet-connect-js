@@ -18,13 +18,13 @@ export class Connector {
     this.dAppMetadata = metadata || getAppMetadata();
   }
 
-  protected async checkPersistedState() {
+  async checkPersistedState() {
     if (!this.client) {
       throw new Error("WC is not initialized");
     }
 
     if (this.session) {
-      return;
+      return this.session;
     }
 
     if (this.client.session.length) {
@@ -53,11 +53,13 @@ export class Connector {
         });
       const sessionCheckResults: (SessionTypes.Struct | null)[] = await Promise.all(sessionCheckPromises);
 
-      return sessionCheckResults
+      this.session = sessionCheckResults
         .find((s: SessionTypes.Struct | null) => !!s) || null;
+      return this.session;
     }
 
-    return null;
+    this.session = null;
+    return this.session;
   }
 
 
@@ -65,14 +67,13 @@ export class Connector {
     if (!this.client) {
       throw new Error("WC is not initialized");
     }
-    if (!this.session) {
-      throw new Error("Session is not connected");
-    }
-    await this.client.disconnect({
-      topic: this.session.topic,
-      reason: getSdkError("USER_DISCONNECTED")
-    });
     this.reset();
+    if (this.session) {
+      await this.client.disconnect({
+        topic: this.session.topic,
+        reason: getSdkError("USER_DISCONNECTED")
+      });
+    }
   }
 
   private reset() {
@@ -81,6 +82,6 @@ export class Connector {
   }
 
   get initialized(): boolean {
-    return !!this.client;
+    return Boolean(this.client && !this.isInitializing);
   }
 }

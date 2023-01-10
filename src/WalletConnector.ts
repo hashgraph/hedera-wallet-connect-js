@@ -34,7 +34,7 @@ export class WalletConnector extends Connector {
 
   public async pair(uri: string): Promise<PairingTypes.Struct> {
     if (!this.initialized) {
-      throw "WC not initialized";
+      throw new Error("WC not initialized");
     }
 
     return this.client.pair({uri});
@@ -198,7 +198,7 @@ export class WalletConnector extends Connector {
 
   public async sendEvent(name: string, data: any): Promise<void> {
     if (!this.session) {
-      throw "No connection session exist!";
+      throw new Error("No connection session exist!");
     }
 
     const chainId = Object.values(this.session.namespaces)
