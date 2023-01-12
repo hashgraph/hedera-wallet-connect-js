@@ -4,7 +4,7 @@ import {SignClient} from "@walletconnect/sign-client";
 import {SessionTypes, SignClientTypes} from "@walletconnect/types";
 import {Subject} from "rxjs";
 import {Connector} from "./Connector.js";
-import {getRequiredNamespaces} from "./Utils.js";
+import {getLedgerIdByChainId, getRequiredNamespaces} from "./Utils.js";
 import {WCSigner} from "./WCSigner.js";
 
 type WalletEvent = {
@@ -84,7 +84,6 @@ export class DAppConnector extends Connector {
       }
 
       const session = await approval();
-      this.ledgerId = ledgerId;
       await this.onSessionConnected(session);
     } finally {
       // @ts-ignore
@@ -106,7 +105,6 @@ export class DAppConnector extends Connector {
 
     const requiredNamespaces = getRequiredNamespaces(ledgerId);
     requiredNamespaces.hedera.events.push(...this.allowedEvents);
-    this.ledgerId = ledgerId;
     return this.client.connect({
       pairingTopic: activeTopic,
       requiredNamespaces
@@ -115,15 +113,18 @@ export class DAppConnector extends Connector {
 
   async onSessionConnected(session: SessionTypes.Struct) {
     const allNamespaceAccounts = Object.values(session?.namespaces || {})
-      .map(namespace => namespace.accounts.map(acc => acc.split(":")[2]))
+      .map(namespace => namespace.accounts.map(acc => {
+        const [network, chainId, account] = acc.split(":");
+        return {network: LedgerId.fromString(getLedgerIdByChainId(chainId)), account};
+      }))
       .flat();
 
     this.session = session;
-    this.signers = allNamespaceAccounts.map(account => new WCSigner(
+    this.signers = allNamespaceAccounts.map(({account, network}) => new WCSigner(
       AccountId.fromString(account),
       this.client,
       session.topic,
-      this.ledgerId
+      network
     ))
   }
 

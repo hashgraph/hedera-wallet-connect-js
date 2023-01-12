@@ -1,6 +1,6 @@
 import SignClient from "@walletconnect/sign-client";
 import {catchError, from, timeout} from "rxjs";
-import {LedgerId, Signer} from "@hashgraph/sdk";
+import {Signer} from "@hashgraph/sdk";
 import {SessionTypes, SignClientTypes} from "@walletconnect/types";
 import {getAppMetadata, getSdkError} from "@walletconnect/utils";
 
@@ -11,7 +11,6 @@ export class Connector {
   protected isInitializing: boolean = false;
   protected client: Client | null = null;
   protected session: SessionTypes.Struct | null = null;
-  protected ledgerId: LedgerId = LedgerId.MAINNET;
   protected signers: Signer[] = [];
 
   protected constructor(metadata?: SignClientTypes.Metadata) {

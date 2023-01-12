@@ -26,7 +26,7 @@ export class WalletConnector extends Connector {
         metadata: this.dAppMetadata
       });
       this.subscribeToEvents();
-      this.checkPersistedState();
+      await this.checkPersistedState();
     } finally {
       this.isInitializing = false;
     }
