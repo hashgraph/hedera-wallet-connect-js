@@ -30,7 +30,18 @@ export class Connector {
       const sessionCheckPromises: Promise<SessionTypes.Struct | null>[] = this.client.session
         .getAll()
         .map((session: SessionTypes.Struct) => {
-          return new Promise((resolve) =>
+          if (session.expiry * 1000 <= Date.now()) {
+            try {
+              this.client!.disconnect({
+                topic: session.topic,
+                reason: { code: 0, message: "Session expired" }
+              });
+            } catch (e) {
+              console.log("Non existing session with topic:", session.topic)
+            }
+            return Promise.reject("Session expired");
+          }
+          return new Promise((resolve, reject) =>
             from(this.client!.ping({ topic: session.topic }))
               .pipe(
                 timeout(3000),
@@ -43,17 +54,14 @@ export class Connector {
                   } catch (e) {
                     console.log("Non existing session with topic:", session.topic)
                   }
-                  resolve(null);
+                  reject("Non existing session");
                 })
               ).subscribe(() => {
               resolve(session);
             })
           );
         });
-      const sessionCheckResults: (SessionTypes.Struct | null)[] = await Promise.all(sessionCheckPromises);
-
-      this.session = sessionCheckResults
-        .find((s: SessionTypes.Struct | null) => !!s) || null;
+      this.session = await Promise.any(sessionCheckPromises).catch(() => null);
       return this.session;
     }
 

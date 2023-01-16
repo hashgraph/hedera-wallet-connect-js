@@ -27,13 +27,17 @@ export const Catch = (errorType: any, handler: HandlerFunction, options?: CatchO
       }
       return result;
     } else {
-      switch (error) {
+      switch ((error as any).code) {
         // @ts-ignore
-        case {}: {
+        case 402: {
+          throw new HWCError(402,"Signature rejected by user", error);
+        }
+        case 403:
+        case 423: {
           throw new HWCError(403,"Wallet is closed or locked", error);
         }
         default: {
-          throw new HWCError(500,"WalletConnect error", error);
+          throw new HWCError((error as any).code || 500,"WalletConnect error", error);
         }
       }
     }
