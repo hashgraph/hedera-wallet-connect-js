@@ -1,7 +1,10 @@
 {
   "compilerOptions": {
     "experimentalDecorators": true,
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext",
+      "dom"
+    ],
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "NodeNext",

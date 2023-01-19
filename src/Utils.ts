@@ -1,5 +1,5 @@
 import { LedgerId, Transaction } from "@hashgraph/sdk";
-import {ProposalTypes} from "@walletconnect/types";
+import {ProposalTypes, SessionTypes} from "@walletconnect/types";
 
 const chainsMap = new Map();
 chainsMap.set(LedgerId.MAINNET.toString(), 295);
@@ -43,6 +43,21 @@ export const getRequiredNamespaces = (ledgerId: LedgerId): ProposalTypes.Require
       events: Object.values(EVENTS),
     }
   };
+};
+
+export const getLedgerIDsFromSession = (session: SessionTypes.Struct): LedgerId[] => {
+  return Object.values(session?.namespaces || {})
+    .flatMap(namespace => namespace.accounts.map(acc => {
+      const [network, chainId, account] = acc.split(":");
+      return LedgerId.fromString(getLedgerIdByChainId(chainId));
+    }));
+};
+export const getAccountLedgerPairsFromSession = (session: SessionTypes.Struct): {network: LedgerId, account: string}[] => {
+  return Object.values(session?.namespaces || {})
+    .flatMap(namespace => namespace.accounts.map(acc => {
+      const [network, chainId, account] = acc.split(":");
+      return {network: LedgerId.fromString(getLedgerIdByChainId(chainId)), account};
+    }));
 };
 
 type Encodable = {

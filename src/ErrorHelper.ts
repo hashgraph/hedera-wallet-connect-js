@@ -4,11 +4,11 @@ type CatchOptions = {
   retryDelay?: number
 }
 
-class HWCError extends Error {
+export class HWCError extends Error {
   constructor(
     public readonly code: number,
     public readonly description: string,
-    public readonly error: Error
+    public readonly error: Error | {}
   ) {
     super(`HWC Error: ${description}`);
   }

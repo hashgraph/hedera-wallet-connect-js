@@ -4,8 +4,13 @@ import {SignClient} from "@walletconnect/sign-client";
 import {SessionTypes, SignClientTypes} from "@walletconnect/types";
 import {Subject} from "rxjs";
 import {Connector} from "./Connector.js";
-import {getLedgerIdByChainId, getRequiredNamespaces} from "./Utils.js";
+import {
+  getAccountLedgerPairsFromSession,
+  getLedgerIDsFromSession,
+  getRequiredNamespaces
+} from "./Utils.js";
 import {WCSigner} from "./WCSigner.js";
+import {HWCError} from "./ErrorHelper.js";
 
 type WalletEvent = {
   name: string,
@@ -67,28 +72,38 @@ export class DAppConnector extends Connector {
     }
 
     if (this.session) {
-      return;
-    }
-
-    try {
-      const requiredNamespaces = getRequiredNamespaces(ledgerId);
-      requiredNamespaces.hedera.events.push(...this.allowedEvents)
-      const { uri, approval } = await this.client.connect({
-        pairingTopic: activeTopic,
-        requiredNamespaces
-      });
-
-      if (uri) {
-        // @ts-ignore
-        QRCodeModal.open(uri);
+      const sessionNetworks = getLedgerIDsFromSession(this.session).map(l => l.toString());
+      if (sessionNetworks.includes(ledgerId.toString())) {
+        return;
       }
-
-      const session = await approval();
-      await this.onSessionConnected(session);
-    } finally {
-      // @ts-ignore
-      QRCodeModal.close();
     }
+
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        const requiredNamespaces = getRequiredNamespaces(ledgerId);
+        requiredNamespaces.hedera.events.push(...this.allowedEvents)
+        const { uri, approval } = await this.client.connect({
+          pairingTopic: activeTopic,
+          requiredNamespaces
+        });
+
+        if (uri) {
+          // @ts-ignore
+          QRCodeModal.open(uri, () => {
+            reject(new HWCError(402, "User rejected pairing", {}));
+          });
+        }
+
+        const session = await approval();
+        await this.onSessionConnected(session);
+        resolve();
+      } catch (e: any) {
+        reject(e);
+      } finally {
+        // @ts-ignore
+        QRCodeModal.close();
+      }
+    });
   }
 
   async prepareConnectURI(ledgerId: LedgerId = LedgerId.MAINNET, activeTopic?: string): Promise<{
@@ -100,7 +115,10 @@ export class DAppConnector extends Connector {
     }
 
     if (this.session) {
-      return;
+      const sessionNetworks = getLedgerIDsFromSession(this.session).map(l => l.toString());
+      if (sessionNetworks.includes(ledgerId.toString())) {
+        return;
+      }
     }
 
     const requiredNamespaces = getRequiredNamespaces(ledgerId);
@@ -112,13 +130,7 @@ export class DAppConnector extends Connector {
   }
 
   async onSessionConnected(session: SessionTypes.Struct) {
-    const allNamespaceAccounts = Object.values(session?.namespaces || {})
-      .map(namespace => namespace.accounts.map(acc => {
-        const [network, chainId, account] = acc.split(":");
-        return {network: LedgerId.fromString(getLedgerIdByChainId(chainId)), account};
-      }))
-      .flat();
-
+    const allNamespaceAccounts = getAccountLedgerPairsFromSession(session);
     this.session = session;
     this.signers = allNamespaceAccounts.map(({account, network}) => new WCSigner(
       AccountId.fromString(account),
