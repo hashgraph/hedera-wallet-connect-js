@@ -14,8 +14,17 @@ import {
 import {ISignClient} from "@walletconnect/types";
 import {Buffer} from "buffer";
 import {getChainByLedgerId, isEncodable, isTransaction} from "./Utils.js";
-import {CatchAll} from "./ErrorHelper.js";
+import { CatchAll, HWCError } from "./ErrorHelper.js";
 import {DAppConnector} from "./DAppConnector.js";
+import {
+  catchError,
+  defer,
+  delay, filter,
+  from,
+  lastValueFrom,
+  takeUntil, throwIfEmpty,
+  timeout
+} from "rxjs";
 
 const handleSignerError = async (error: any, signer: Signer) => {
   try {
@@ -51,12 +60,29 @@ export class WCSigner implements Signer {
   ) {
   }
 
+  private wrappedRequest<T>(params): Promise<T> {
+    const cancelWithPing$ = defer(() => this.client!.ping({topic: this.topic}))
+      .pipe(
+        delay(5000),
+        timeout(10000),
+        catchError(async () => true),
+        filter(error => !!error)
+      );
+    return lastValueFrom<T>(
+      from(this.client.request<T>(params))
+        .pipe(
+          takeUntil(cancelWithPing$),
+          throwIfEmpty(() => new HWCError(403,"Wallet is closed or locked", {}))
+        )
+    );
+  }
+
   getAccountId(): AccountId {
     return this.accountId;
   }
 
   async getAccountKey(): Promise<Key> {
-    return this.client.request<Key>({
+    return this.wrappedRequest<Key>({
       topic: this.topic,
       request: {
         method: "getAccountKey",
@@ -73,7 +99,7 @@ export class WCSigner implements Signer {
   }
 
   async getNetwork(): Promise<{[key: string]: (string | AccountId)}> {
-    return this.client.request<{[key: string]: (string | AccountId)}>({
+    return this.wrappedRequest<{[key: string]: (string | AccountId)}>({
       topic: this.topic,
       request: {
         method: "getNetwork",
@@ -86,7 +112,7 @@ export class WCSigner implements Signer {
   }
 
   async getMirrorNetwork(): Promise<string[]> {
-    return this.client.request<string[]>({
+    return this.wrappedRequest<string[]>({
       topic: this.topic,
       request: {
         method: "getMirrorNetwork",
@@ -99,7 +125,7 @@ export class WCSigner implements Signer {
   }
 
   async sign(messages: Uint8Array[]): Promise<SignerSignature[]> {
-    const result = await this.client.request<SignerSignature[]>({
+    const result = await this.wrappedRequest<SignerSignature[]>({
       topic: this.topic,
       request: {
         method: "sign",
@@ -114,7 +140,7 @@ export class WCSigner implements Signer {
   }
 
   getAccountBalance(): Promise<AccountBalance> {
-    return this.client.request<AccountBalance>({
+    return this.wrappedRequest<AccountBalance>({
       topic: this.topic,
       request: {
         method: "getAccountBalance",
@@ -127,7 +153,7 @@ export class WCSigner implements Signer {
   }
 
   getAccountInfo(): Promise<AccountInfo> {
-    return this.client.request<AccountInfo>({
+    return this.wrappedRequest<AccountInfo>({
       topic: this.topic,
       request: {
         method: "getAccountInfo",
@@ -140,7 +166,7 @@ export class WCSigner implements Signer {
   }
 
   getAccountRecords(): Promise<TransactionRecord[]> {
-    return this.client.request<TransactionRecord[]>({
+    return this.wrappedRequest<TransactionRecord[]>({
       topic: this.topic,
       request: {
         method: "getAccountRecords",
@@ -153,7 +179,7 @@ export class WCSigner implements Signer {
   }
 
   async signTransaction<T extends Transaction>(transaction: T): Promise<T> {
-    const encodedTransaction = await this.client.request<string>({
+    const encodedTransaction = await this.wrappedRequest<string>({
       topic: this.topic,
       request: {
         method: "signTransaction",
@@ -218,7 +244,7 @@ export class WCSigner implements Signer {
       throw new Error("Argument is not executable");
     }
     const isTransactionType = isTransaction(request);
-    const result = await this.client.request<any>({
+    const result = await this.wrappedRequest<any>({
       topic: this.topic,
       request: {
         method: "call",
