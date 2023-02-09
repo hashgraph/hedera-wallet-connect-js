@@ -74,12 +74,15 @@ export class Connector {
     if (!this.client) {
       throw new Error("WC is not initialized");
     }
-    this.reset();
-    if (this.session) {
-      await this.client.disconnect({
-        topic: this.session.topic,
-        reason: getSdkError("USER_DISCONNECTED")
-      });
+    try {
+      if (this.session) {
+        await this.client.disconnect({
+          topic: this.session.topic,
+          reason: getSdkError("USER_DISCONNECTED")
+        });
+      }
+    } finally {
+      this.reset();
     }
   }
 

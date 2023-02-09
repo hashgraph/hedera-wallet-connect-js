@@ -13,7 +13,13 @@ import {
 } from "@hashgraph/sdk";
 import {ISignClient} from "@walletconnect/types";
 import {Buffer} from "buffer";
-import {getChainByLedgerId, isEncodable, isTransaction} from "./Utils.js";
+import {
+  convertToSignerSignature,
+  getChainByLedgerId,
+  isEncodable,
+  isTransaction,
+  METHODS
+} from "./Utils.js";
 import { CatchAll, HWCError } from "./ErrorHelper.js";
 import {DAppConnector} from "./DAppConnector.js";
 import {
@@ -57,7 +63,13 @@ export class WCSigner implements Signer {
       private readonly client: ISignClient,
       private readonly topic: string,
       private readonly ledgerId: LedgerId = LedgerId.MAINNET,
+      private extensionMethods: string[] = []
   ) {
+    this.extensionMethods
+      .filter(method => !Object.values(METHODS).includes(method as any))
+      .forEach(method => {
+        this[method] = (...args: any[]) => this.extensionMethodCall(method, args);
+      });
   }
 
   private wrappedRequest<T>(params): Promise<T> {
@@ -124,14 +136,31 @@ export class WCSigner implements Signer {
     });
   }
 
-  async sign(messages: Uint8Array[]): Promise<SignerSignature[]> {
+  async sign(messages: Uint8Array[], signOptions?: Record<string, any>): Promise<SignerSignature[]> {
     const result = await this.wrappedRequest<SignerSignature[]>({
       topic: this.topic,
       request: {
         method: "sign",
         params: {
           accountId: this.accountId.toString(),
-          messages: messages.map(message => Buffer.from(message).toString("base64"))
+          messages: messages.map(message => Buffer.from(message).toString("base64")),
+          signOptions
+        }
+      },
+      chainId: getChainByLedgerId(this.ledgerId)
+    });
+
+    return Promise.resolve(result.map(r => convertToSignerSignature(r)));
+  }
+
+  private async extensionMethodCall<T>(name, args: Record<any, any>): Promise<T> {
+    const result = await this.wrappedRequest<T>({
+      topic: this.topic,
+      request: {
+        method: name,
+        params: {
+          args,
+          accountId: this.accountId.toString()
         }
       },
       chainId: getChainByLedgerId(this.ledgerId)

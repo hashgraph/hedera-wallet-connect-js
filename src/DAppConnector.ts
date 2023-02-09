@@ -5,7 +5,7 @@ import {SessionTypes, SignClientTypes} from "@walletconnect/types";
 import {Subject} from "rxjs";
 import {Connector} from "./Connector.js";
 import {
-  getAccountLedgerPairsFromSession,
+  getAccountLedgerPairsFromSession, getExtensionMethodsFromSession,
   getLedgerIDsFromSession,
   getRequiredNamespaces
 } from "./Utils.js";
@@ -21,6 +21,7 @@ export type DAppMetadata = SignClientTypes.Metadata;
 
 export class DAppConnector extends Connector {
   private allowedEvents: string[] = [];
+  private extensionMethods: string[] = [];
   static instance: DAppConnector;
   public $events: Subject<WalletEvent> = new Subject<WalletEvent>();
 
@@ -29,8 +30,9 @@ export class DAppConnector extends Connector {
     DAppConnector.instance = this;
   }
 
-  async init(events: string[] = []) {
+  async init(events: string[] = [], methods: string[] = []) {
     this.allowedEvents = events;
+    this.extensionMethods = methods;
     try {
       this.isInitializing = true;
       this.client = await SignClient.init({
@@ -123,6 +125,7 @@ export class DAppConnector extends Connector {
 
     const requiredNamespaces = getRequiredNamespaces(ledgerId);
     requiredNamespaces.hedera.events.push(...this.allowedEvents);
+    requiredNamespaces.hedera.methods.push(...this.extensionMethods);
     return this.client.connect({
       pairingTopic: activeTopic,
       requiredNamespaces
@@ -136,7 +139,8 @@ export class DAppConnector extends Connector {
       AccountId.fromString(account),
       this.client,
       session.topic,
-      network
+      network,
+      getExtensionMethodsFromSession(session)
     ))
   }
 
