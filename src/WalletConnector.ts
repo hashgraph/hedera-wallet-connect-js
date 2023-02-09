@@ -6,6 +6,7 @@ import {getSdkError} from "@walletconnect/utils";
 import {Connector} from "./Connector.js";
 import ApproveParams = EngineTypes.ApproveParams;
 import RejectParams = EngineTypes.RejectParams;
+import { getExtensionMethodsFromSession } from "./Utils.js";
 
 type ProposalCallback = (proposal: SignClientTypes.EventArguments["session_proposal"]) => Promise<void>;
 
@@ -105,7 +106,7 @@ export class WalletConnector extends Connector {
           break;
         }
         case "sign": {
-          const signatures: SignerSignature[] = await signer.sign(request.params.messages)
+          const signatures: SignerSignature[] = await signer.sign(request.params.messages, request.params.signOptions)
           formattedResult = formatJsonRpcResult(id, signatures);
           break;
         }
@@ -161,8 +162,15 @@ export class WalletConnector extends Connector {
           formattedResult = formatJsonRpcResult(id, result);
           break;
         }
-        default:
-          throw new Error(getSdkError("INVALID_METHOD").message);
+        default: {
+          const extensionMethods = getExtensionMethodsFromSession(this.session);
+          if (extensionMethods.includes(request.method)) {
+            const result = await signer[request.method](...request.params.args)
+            formattedResult = formatJsonRpcResult(id, result);
+          } else {
+            throw new Error(getSdkError("INVALID_METHOD").message);
+          }
+        }
       }
       await this.client.respond({
         topic,

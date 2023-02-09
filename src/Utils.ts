@@ -1,5 +1,6 @@
-import { LedgerId, Transaction } from "@hashgraph/sdk";
+import {AccountId, LedgerId, PublicKey, SignerSignature, Transaction} from "@hashgraph/sdk";
 import {ProposalTypes, SessionTypes} from "@walletconnect/types";
+import {Buffer} from "buffer";
 
 const chainsMap = new Map();
 chainsMap.set(LedgerId.MAINNET.toString(), 295);
@@ -60,6 +61,12 @@ export const getAccountLedgerPairsFromSession = (session: SessionTypes.Struct): 
     }));
 };
 
+export const getExtensionMethodsFromSession = (session: SessionTypes.Struct): string[] => {
+  return Object.values(session.namespaces)
+    .flatMap(ns => ns.methods)
+    .filter(method => !Object.values(METHODS).includes(method as any));
+}
+
 type Encodable = {
   toBytes(): Uint8Array
 }
@@ -77,3 +84,28 @@ export const isTransaction = (obj: any): obj is Transaction => {
   }
   return false;
 };
+
+export const evmAddressFromObject = (data): string | null => {
+  try {
+    return Buffer.from(Object.values(data?._bytes || []) as number[]).toString("hex");
+  } catch {
+    return null;
+  }
+}
+
+export const publicKeyFromObject = (data): PublicKey | null => {
+  try {
+    return PublicKey.fromBytes(Buffer.from(Object.values(data?._key?._key?._keyData || []) as number[]));
+  } catch {
+    return null;
+  }
+}
+
+export const convertToSignerSignature = (data): SignerSignature => {
+  const publicKey = publicKeyFromObject(data.publicKey);
+  const {shard, realm, num, aliasKey, aliasEvmAddress} = data.accountId;
+  const accountAddress = evmAddressFromObject(aliasEvmAddress) || publicKeyFromObject(aliasKey) || num.low;
+  const accountId = AccountId.fromString(`${shard.low}.${realm.low}.${accountAddress.toString()}`);
+  const signature = Buffer.from(Object.values(data.signature.data || data.signature) as []);
+  return new SignerSignature({accountId, signature, publicKey});
+}
