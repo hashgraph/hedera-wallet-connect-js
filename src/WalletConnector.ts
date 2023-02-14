@@ -12,7 +12,6 @@ type ProposalCallback = (proposal: SignClientTypes.EventArguments["session_propo
 
 export class WalletConnector extends Connector {
   public onProposalReceive: ProposalCallback;
-  private proposalCache: Map<string, SignClientTypes.EventArguments["session_proposal"]> = new Map();
 
   constructor(metadata?: SignClientTypes.Metadata) {
     super(metadata);
@@ -39,13 +38,7 @@ export class WalletConnector extends Connector {
       throw new Error("WC not initialized");
     }
 
-    const result = await this.client.pair({uri});
-
-    if (this.proposalCache.has(result.topic)) {
-      this.onSessionProposal(this.proposalCache.get(result.topic)!);
-    }
-
-    return result;
+    return await this.client.pair({uri});
   }
 
   private subscribeToEvents() {
@@ -186,7 +179,6 @@ export class WalletConnector extends Connector {
   }
 
   private async onSessionProposal(proposal: SignClientTypes.EventArguments["session_proposal"]): Promise<void> {
-    this.updateProposalCache(proposal);
     await this.onProposalReceive(proposal)
   }
 
@@ -223,18 +215,6 @@ export class WalletConnector extends Connector {
       .flatMap(ns => ns.events);
     if (allowedEvents.includes(name)) {
       await this.client.emit({topic: this.session.topic, chainId, event: {name, data}});
-    }
-  }
-
-  private updateProposalCache(proposal: SignClientTypes.EventArguments["session_proposal"]) {
-    if (proposal?.params?.pairingTopic && !this.proposalCache.has(proposal.params.pairingTopic)) {
-      this.proposalCache.set(proposal.params.pairingTopic, proposal);
-    }
-
-    for (const [topic, proposal] of this.proposalCache.entries()) {
-      if (proposal.params.expiry * 1000 < (new Date()).getTime()) {
-        this.proposalCache.delete(topic);
-      }
     }
   }
 }
