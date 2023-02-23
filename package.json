@@ -1,5 +1,5 @@
 {
-  "name": "@bladelabs/hedera-wallet-connect",
+  "name": "@hashgraph/hedera-wallet-connect",
   "version": "0.1.0",
   "type": "module",
   "exports": {
@@ -14,7 +14,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Blade-Labs/hedera-wallet-connect"
+    "url": "https://github.com/hashgraph/hedera-wallet-connect"
   },
   "scripts": {
     "clean": "rimraf lib",
