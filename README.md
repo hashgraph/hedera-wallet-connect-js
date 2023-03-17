@@ -2,14 +2,19 @@
 
 This package is a messaging relay between decentralized applications and wallets in Hedera network based on Wallet Connect relays.
 
+Note: This is an initial contribution to a common wallet connect library for Hedera native wallets which is subject to change following community input.
+
 ## Getting started
+
 ### Installation
+
 1. Install npm package `hedera-wallet-connect`;
 ```bash
 npm install hedera-wallet-connect
 ```
 
 ### DApp section
+
 1. Import `DAppConnector` from `hedera-wallet-connect` package:
 ```typescript
 import {DAppConnector} from "hedera-wallet-connect";
