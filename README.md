@@ -1,6 +1,6 @@
 # Deprecation Notice
 
-This library is being deprecated and will be superceded by a library implementing
+This library is being deprecated and will be superseded by a library implementing
 [HIP-820](https://github.com/hashgraph/hedera-improvement-proposal/pull/820/files). The final
 destination for the community supported and governed helper library implementing WalletConnect
 will be `@hashgraph/walletconnect`.
