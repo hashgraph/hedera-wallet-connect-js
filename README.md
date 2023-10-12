@@ -1,3 +1,24 @@
+# Deprecation Notice
+
+This library is being deprecated and will be superseded by a library implementing
+[HIP-820](https://github.com/hashgraph/hedera-improvement-proposal/pull/820/files). The final
+destination for the community supported and governed helper library implementing WalletConnect
+will be `@hashgraph/walletconnect`.
+
+There is an active discussion surrounding standardizing the "Integration of Wallet Connect 2.0
+Protocol for Wallets and dApps on Hedera" via the
+[HIP-820 discussion](https://github.com/hashgraph/hedera-improvement-proposal/discussions/819).
+
+We will update the
+[WalletConnect Spec PR](https://github.com/WalletConnect/walletconnect-specs/pull/117) based on
+the results of
+[HIP-820](https://github.com/hashgraph/hedera-improvement-proposal/pull/820/files).
+
+Please join the discussion!
+
+---
+
+
 # **Hedera Wallet Connect** 
 
 This package is a messaging relay between decentralized applications and wallets in Hedera network based on Wallet Connect relays.
